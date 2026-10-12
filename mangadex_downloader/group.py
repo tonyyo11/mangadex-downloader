@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from .errors import GroupNotFound
 from .fetcher import get_group
 from .utils import get_local_attr
 
@@ -28,11 +29,26 @@ class Group:
     def __init__(self, group_id=None, data=None):
         if not data:
             self.data = get_group(group_id)["data"]
+        elif "attributes" not in data:
+            # Relationship data without expanded attributes
+            # (e.g. deleted scanlation group)
+            try:
+                self.data = get_group(data["id"])["data"]
+            except GroupNotFound:
+                self.data = data
         else:
             self.data = data
 
         self.id = self.data["id"]
-        attr = self.data["attributes"]
+        attr = self.data.get("attributes")
+
+        if attr is None:
+            self.name = "Unknown"
+            self.alt_names = []
+            self.locked = False
+            self.url = None
+            self.description = None
+            return
 
         # Name
         self.name = attr["name"]
